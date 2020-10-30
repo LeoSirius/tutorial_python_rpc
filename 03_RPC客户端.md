@@ -26,6 +26,42 @@
 
 ## 客户端代码
 
+```py
+# rpc_client.py
+import json
+import time
+import struct
+import socket
 
+
+# 请求长度前缀和响应长度前缀都是4字节长度
+def rpc(sock, in_, params):
+    request = json.dumps({'in': in_, 'params': params})  # 请求消息体
+    length_prefix = struct.pack('I', len(request))       # 请求长度前缀
+
+    sock.sendall(length_prefix)
+    sock.sendall(request.encode())
+
+    length_prefix = sock.recv(4)                         # 响应长度前缀
+    length, = struct.unpack("I", length_prefix)          # 真正的响应长度
+    body = sock.recv(length)
+    response = json.loads(body)
+
+    return response['out'], response['result']
+
+
+if __name__ == "__main__":
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(('localhost', 8080))
+
+    # 连续发送10个rpc请求
+    for i in range(10):
+        out, result = rpc(s, 'ping', f'ireader {i}')
+        print(f'out = {out}, result = {result}')
+        time.sleep(1)    # 休眠一秒，方便观察
+
+    s.close()
+
+```
 
 
